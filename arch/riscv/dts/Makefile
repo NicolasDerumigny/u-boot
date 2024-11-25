@@ -14,6 +14,7 @@ dtb-$(CONFIG_TARGET_XILINX_MBV) += xilinx-mbv64.dtb
 dtb-$(CONFIG_TARGET_ASPEED_AST2700_IBEX) += ast2700-ibex.dtb
 dtb-$(CONFIG_TARGET_OPENHWGROUP_CVA6_GENESYSII) += cva6_genesysII.dtb
 dtb-$(CONFIG_TARGET_OPENHWGROUP_CVA6_GENESYSII) += $(addsuffix .dtb, $(CONFIG_DEFAULT_DEVICE_TREE:"%"=%))
+dtb-$(CONFIG_TARGET_OPENHWGROUP_CVA6_ZCU104) += $(addsuffix .dtb, $(CONFIG_DEFAULT_DEVICE_TREE:"%"=%))
 
 include $(srctree)/scripts/Makefile.dts
 
