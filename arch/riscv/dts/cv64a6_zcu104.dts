@@ -40,22 +40,22 @@
     compatible = "gpio-leds";
     heartbeat-led0 {
       gpios = <&xlnx_gpio 0 GPIO_ACTIVE_HIGH>;
-      linux,default-trigger = "heartbeat";
+      linux,default-trigger = "panic";
       retain-state-suspended;
     };
     heartbeat-led1 {
       gpios = <&xlnx_gpio 1 GPIO_ACTIVE_HIGH>;
-      linux,default-trigger = "heartbeat";
+      linux,default-trigger = "panic";
       retain-state-suspended;
     };
     heartbeat-led2 {
       gpios = <&xlnx_gpio 2 GPIO_ACTIVE_HIGH>;
-      linux,default-trigger = "heartbeat";
+      linux,default-trigger = "panic";
       retain-state-suspended;
     };
     heartbeat-led3 {
       gpios = <&xlnx_gpio 3 GPIO_ACTIVE_HIGH>;
-      linux,default-trigger = "heartbeat";
+      linux,default-trigger = "panic";
       retain-state-suspended;
     };
     eth0_led100M {
