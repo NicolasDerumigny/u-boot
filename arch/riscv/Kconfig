@@ -35,7 +35,10 @@ config TARGET_OPENHWGROUP_CVA6_GENESYSII
 	bool "Target cva6 architecture on genesysII board"
 
 config TARGET_OPENHWGROUP_CVA6_ZCU104
-	bool "Target cva6 architecture on zcu104 board"
+	bool "Target cva6 architecture on ZCU104 board"
+
+config TARGET_OPENHWGROUP_CVA6_PYNQ_Z2
+	bool "Target cva6 architecture on PYNQ-Z2 board"
 
 config TARGET_SIPEED_MAIX
 	bool "Support Sipeed Maix Board"
@@ -103,6 +106,7 @@ source "board/thead/th1520_lpi4a/Kconfig"
 source "board/xilinx/mbv/Kconfig"
 source "board/openhwgroup/cva6_genesysII/Kconfig"
 source "board/openhwgroup/cva6_zcu104/Kconfig"
+source "board/openhwgroup/cva6_pynq_z2/Kconfig"
 
 # platform-specific options below
 source "arch/riscv/cpu/andes/Kconfig"
