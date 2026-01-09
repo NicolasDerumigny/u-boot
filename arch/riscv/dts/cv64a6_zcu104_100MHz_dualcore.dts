@@ -116,7 +116,7 @@
     //    reg-names = "control";
     //  };
     uart@10000000 {
-      compatible = "xlnx,axi-uart16550-1.01.a", "xlnx,xps-uart16550-2.00.a", "ns16550";
+      compatible = "xlnx,axi-uart16550-1.01.a", "xlnx,xps-uart16550-2.00.a", "ns16550a";
       reg = <0x0 0x10000000 0x0 0x10000>;
       clock-frequency = <100000000>;
       current-speed = <115200>;
