@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <dm.h>
 #include <log.h>
+#include <dm/device_compat.h>
 #include <dm/uclass-internal.h>
 #include <linux/delay.h>
 #include <power/pmic.h>
@@ -43,8 +44,7 @@ static void regulator_set_value_ramp_delay(struct udevice *dev, int old_uV,
 {
 	int delay = DIV_ROUND_UP(abs(new_uV - old_uV), ramp_delay);
 
-	debug("regulator %s: delay %u us (%d uV -> %d uV)\n", dev->name, delay,
-	      old_uV, new_uV);
+	dev_dbg(dev, "delay %u us (%d uV -> %d uV)\n", delay, old_uV, new_uV);
 
 	udelay(delay);
 }
@@ -260,13 +260,13 @@ int regulator_get_by_platname(const char *plat_name, struct udevice **devp)
 
 	*devp = NULL;
 
-	for (ret = uclass_find_first_device(UCLASS_REGULATOR, &dev); dev;
-	     ret = uclass_find_next_device(&dev)) {
-		if (ret) {
-			debug("regulator %s, ret=%d\n", dev->name, ret);
-			continue;
-		}
+	ret = uclass_find_first_device(UCLASS_REGULATOR, &dev);
+	if (ret) {
+		dev_dbg(dev, "ret=%d\n", ret);
+		return ret;
+	}
 
+	for (; dev; uclass_find_next_device(&dev)) {
 		uc_pdata = dev_get_uclass_plat(dev);
 		if (!uc_pdata || strcmp(plat_name, uc_pdata->name))
 			continue;
@@ -389,7 +389,7 @@ int regulator_list_autoset(const char *list_platname[],
 		ret = regulator_autoset_by_name(list_platname[i], &dev);
 		if (ret != -EMEDIUMTYPE && verbose)
 			regulator_show(dev, ret);
-		if (ret & !error)
+		if (ret && ret != -EALREADY && !error)
 			error = ret;
 
 		if (list_devp)
@@ -410,9 +410,12 @@ static bool regulator_name_is_unique(struct udevice *check_dev,
 	int ret;
 	int len;
 
-	for (ret = uclass_find_first_device(UCLASS_REGULATOR, &dev); dev;
-	     ret = uclass_find_next_device(&dev)) {
-		if (ret || dev == check_dev)
+	ret = uclass_find_first_device(UCLASS_REGULATOR, &dev);
+	if (ret)
+		return true;
+
+	for (; dev; uclass_find_next_device(&dev)) {
+		if (dev == check_dev)
 			continue;
 
 		uc_pdata = dev_get_uclass_plat(dev);
@@ -439,16 +442,15 @@ static int regulator_post_bind(struct udevice *dev)
 	/* Regulator's mandatory constraint */
 	uc_pdata->name = dev_read_string(dev, property);
 	if (!uc_pdata->name) {
-		debug("%s: dev '%s' has no property '%s'\n",
-		      __func__, dev->name, property);
+		dev_dbg(dev, "has no property '%s'\n", property);
 		uc_pdata->name = dev_read_name(dev);
 		if (!uc_pdata->name)
 			return -EINVAL;
 	}
 
 	if (!regulator_name_is_unique(dev, uc_pdata->name)) {
-		debug("'%s' of dev: '%s', has nonunique value: '%s\n",
-		      property, dev->name, uc_pdata->name);
+		dev_err(dev, "'%s' has nonunique value: '%s\n",
+			property, uc_pdata->name);
 		return -EINVAL;
 	}
 

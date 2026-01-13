@@ -12,6 +12,7 @@
 #include <asm/mach-imx/boot_mode.h>
 #include <asm/mach-imx/iomux-v3.h>
 #include <dm/uclass.h>
+#include <env.h>
 #include <hang.h>
 #include <i2c_eeprom.h>
 #include <image.h>
@@ -47,6 +48,9 @@ u8 dmo_get_memcfg(void)
 					      "dmo,ram-coding-gpios",
 					      gpio, ARRAY_SIZE(gpio),
 					      GPIOD_IS_IN);
+	if (ret < 0)
+		return BIT(2) | BIT(0);
+
 	for (i = 0; i < ret; i++)
 		memcfg |= !!dm_gpio_get_value(&(gpio[i])) << i;
 

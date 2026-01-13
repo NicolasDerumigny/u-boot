@@ -8,6 +8,7 @@
 
 #define LOG_CATEGORY LOGC_EFI
 
+#include <efi_device_path.h>
 #include <efi_loader.h>
 #include <efi_variable.h>
 #include <env.h>
@@ -22,6 +23,7 @@
 #include <asm/global_data.h>
 #include <u-boot/uuid.h>
 
+#include <asm/sections.h>
 #include <crypto/pkcs7.h>
 #include <crypto/pkcs7_parser.h>
 #include <linux/err.h>
@@ -284,33 +286,12 @@ out:
 }
 
 #if defined(CONFIG_EFI_CAPSULE_AUTHENTICATE)
-int efi_get_public_key_data(void **pkey, efi_uintn_t *pkey_len)
+static int efi_get_public_key_data(const void **pkey, efi_uintn_t *pkey_len)
 {
-	const void *fdt_blob = gd->fdt_blob;
-	const void *blob;
-	const char *cnode_name = "capsule-key";
-	const char *snode_name = "signature";
-	int sig_node;
-	int len;
+	const void *blob = __efi_capsule_sig_begin;
+	const int len = __efi_capsule_sig_end - __efi_capsule_sig_begin;
 
-	sig_node = fdt_subnode_offset(fdt_blob, 0, snode_name);
-	if (sig_node < 0) {
-		log_err("Unable to get signature node offset\n");
-
-		return -FDT_ERR_NOTFOUND;
-	}
-
-	blob = fdt_getprop(fdt_blob, sig_node, cnode_name, &len);
-
-	if (!blob || len < 0) {
-		log_err("Unable to get capsule-key value\n");
-		*pkey = NULL;
-		*pkey_len = 0;
-
-		return -FDT_ERR_NOTFOUND;
-	}
-
-	*pkey = (void *)blob;
+	*pkey = blob;
 	*pkey_len = len;
 
 	return 0;
@@ -321,7 +302,8 @@ efi_status_t efi_capsule_authenticate(const void *capsule, efi_uintn_t capsule_s
 {
 	u8 *buf;
 	int ret;
-	void *fdt_pkey, *pkey;
+	void *pkey;
+	const void *stored_pkey;
 	efi_uintn_t pkey_len;
 	uint64_t monotonic_count;
 	struct efi_signature_store *truststore;
@@ -373,7 +355,7 @@ efi_status_t efi_capsule_authenticate(const void *capsule, efi_uintn_t capsule_s
 		goto out;
 	}
 
-	ret = efi_get_public_key_data(&fdt_pkey, &pkey_len);
+	ret = efi_get_public_key_data(&stored_pkey, &pkey_len);
 	if (ret < 0)
 		goto out;
 
@@ -381,7 +363,7 @@ efi_status_t efi_capsule_authenticate(const void *capsule, efi_uintn_t capsule_s
 	if (!pkey)
 		goto out;
 
-	memcpy(pkey, fdt_pkey, pkey_len);
+	memcpy(pkey, stored_pkey, pkey_len);
 	truststore = efi_build_signature_store(pkey, pkey_len);
 	if (!truststore)
 		goto out;
@@ -875,18 +857,9 @@ static efi_status_t get_dp_device(u16 *boot_var,
 	struct efi_device_path *file_dp;
 	efi_status_t ret;
 
-	size = 0;
-	ret = efi_get_variable_int(boot_var, &efi_global_variable_guid,
-				   NULL, &size, NULL, NULL);
-	if (ret == EFI_BUFFER_TOO_SMALL) {
-		buf = malloc(size);
-		if (!buf)
-			return EFI_OUT_OF_RESOURCES;
-		ret = efi_get_variable_int(boot_var, &efi_global_variable_guid,
-					   NULL, &size, buf, NULL);
-	}
-	if (ret != EFI_SUCCESS)
-		return ret;
+	buf = efi_get_var(boot_var, &efi_global_variable_guid, &size);
+	if (!buf)
+		return EFI_NOT_FOUND;
 
 	efi_deserialize_load_option(&lo, buf, &size);
 
@@ -978,22 +951,11 @@ static efi_status_t find_boot_device(void)
 
 skip:
 	/* find active boot device in BootOrder */
-	size = 0;
-	ret = efi_get_variable_int(u"BootOrder", &efi_global_variable_guid,
-				   NULL, &size, NULL, NULL);
-	if (ret == EFI_BUFFER_TOO_SMALL) {
-		boot_order = malloc(size);
-		if (!boot_order) {
-			ret = EFI_OUT_OF_RESOURCES;
-			goto out;
-		}
-
-		ret = efi_get_variable_int(u"BootOrder",
-					   &efi_global_variable_guid,
-					   NULL, &size, boot_order, NULL);
-	}
-	if (ret != EFI_SUCCESS)
+	boot_order = efi_get_var(u"BootOrder", &efi_global_variable_guid, &size);
+	if (!boot_order) {
+		ret = EFI_NOT_FOUND;
 		goto out;
+	}
 
 	/* check in higher order */
 	num = size / sizeof(u16);
@@ -1114,8 +1076,10 @@ static efi_status_t efi_capsule_scan_dir(u16 ***files, unsigned int *num)
 	while (1) {
 		tmp_size = dirent_size;
 		ret = EFI_CALL((*dirh->read)(dirh, &tmp_size, dirent));
-		if (ret != EFI_SUCCESS)
+		if (ret != EFI_SUCCESS) {
+			free(tmp_files);
 			goto err;
+		}
 		if (!tmp_size)
 			break;
 
