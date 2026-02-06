@@ -11,6 +11,16 @@
     stdout-path = "/soc/uart@10000000:115200";
     //tick-timer =  "/cpus/cpu@0";
   };
+  clk100: clk100 {
+      compatible = "fixed-clock";
+      #clock-cells = <0>;
+      clock-frequency = <100000000>;
+  };
+  clk125: clk125 {
+      compatible = "fixed-clock";
+      #clock-cells = <0>;
+      clock-frequency = <125000000>;
+  };
   cpus {
     #address-cells = <1>;
     #size-cells = <0>;
@@ -21,9 +31,11 @@
       reg = <0>;
       status = "okay";
       compatible = "eth, ariane", "riscv";
-      riscv,isa = "rv64imafdc";
+      riscv,isa = "rv64imafdch_zicbom";
       mmu-type = "riscv,sv39";
       tlb-split;
+      d-cache-block-size = <128>;
+      riscv,cbom-block-size = <128>;
       // HLIC - hart local interrupt controller
       CPU0_intc: interrupt-controller {
         #interrupt-cells = <1>;
@@ -37,9 +49,11 @@
       reg = <1>;
       status = "okay";
       compatible = "eth, ariane", "riscv";
-      riscv,isa = "rv64imafdc";
+      riscv,isa = "rv64imafdch_zicbom";
       mmu-type = "riscv,sv39";
       tlb-split;
+      d-cache-block-size = <128>;
+      riscv,cbom-block-size = <128>;
       // HLIC - hart local interrupt controller
       CPU1_intc: interrupt-controller {
         #interrupt-cells = <1>;
@@ -90,6 +104,7 @@
     #size-cells = <2>;
     compatible = "eth,ariane-bare-soc", "simple-bus";
     ranges;
+    dma-noncoherent;
     clint@2000000 {
       compatible = "riscv,clint0";
       interrupts-extended = <&CPU0_intc 3 &CPU0_intc 7 &CPU1_intc 3 &CPU1_intc 7>;
@@ -162,66 +177,65 @@
       // };
     };
     eth_xlnx_dma: dma@41e00000 {
+        compatible = "xlnx,axi-dma-1.00.a";
+        dma-controller;
         #dma-cells = <1>;
-        axistream-connected = <&eth_xlnx_mac>;
-        axistream-control-connected = <&eth_xlnx_mac>;
-        clock-frequency = <100000000>;
-        compatible = "xlnx,eth-dma";
         reg = <0x0 0x41e00000 0x0 0x10000>;
-        xlnx,addrwidth = <0x40>;
-        xlnx,include-dre;
-        xlnx,num-queues = <0x1>;
         interrupt-parent = <&PLIC0>;
-        // TX - RX
-        interrupts = <8 9>;
+
+        xlnx,addrwidth = <64>;
+        xlnx,axistream-connected;
+        xlnx,sg-length-width = <14>;
+
+        clocks = <&clk100>;
+        clock-names = "s_axi_lite_aclk";
+
+        eth_xlnx_dma_mm2s: dma-channel@41e00000 {
+            compatible = "xlnx,axi-dma-mm2s-channel";
+            interrupts = <8>;
+            xlnx,datawidth = <64>;
+            xlnx,include-dre;
+        };
+
+        eth_xlnx_dma_s2mm: dma-channel@41e00030 {
+            compatible = "xlnx,axi-dma-s2mm-channel";
+            interrupts = <9>;
+            xlnx,datawidth = <64>;
+            xlnx,include-dre;
+        };
     };
-    eth_xlnx_mac: ethernet0@40c00000 {
-        compatible = "xlnx,axi-ethernet-7.2", "xlnx,axi-ethernet-1.00.a";
-        interrupts = <3>;
-        clock-frequency = <100000000>;
-        phy-mode = "rgmii-id";
-        xlnx,rxcsum = <0x2>;
-        xlnx,rxmem = <0x1000>;
-        phy-handle=<&eth_xlnx_phy0>;
-        local-mac-address = [00 18 3e 02 e3 7f];
-        axistream-connected = <&eth_xlnx_dma>;
-        axistream-control-connected = <&eth_xlnx_dma>;
-        device_type = "network";
-        reg = <0x0 0x40c00000 0x0 0x40000>;
-        xlnx = <0x0>;
-        xlnx,txcsum = <0x2>;
-        xlnx,axiliteclkrate = <0x0>;
-        xlnx,axisclkrate = <0x0>;
-        xlnx,channel-ids = "1";
-        xlnx,clockselection = <0x0>;
-        xlnx,enableasyncsgmii = <0x0>;
-        xlnx,gt-type = <0x0>;
-        xlnx,gtinex = <0x0>;
-        xlnx,gtlocation = <0x0>;
-        xlnx,gtrefclksrc = <0x0>;
-        xlnx,include-dre;
-        xlnx,instantiatebitslice0 = <0x0>;
-        xlnx,num-queues =  <0x1>;
-        xlnx,phyaddr = <0x0>;
-        xlnx,phyrst-board-interface-dummy-port = <0x0>;
-        xlnx,rable = <0x0>;
-        xlnx,rxlane0-placement = <0x0>;
-        xlnx,rxlane1-placement = <0x0>;
-        xlnx,rxnibblebitslice0used = <0x0>;
-        xlnx,tx-in-upper-nibble = <0x1>;
-        xlnx,txlane0-placement = <0x0>;
-        xlnx,txlane1-placement = <0x0>;
-        xlnx,versal-gt-board-flow = <0x0>;
+    eth_xlnx_mac: ethernet@40c00000 {
+        compatible = "xlnx,axi-ethernet-2.01.a", "xlnx,axi-ethernet-1.01.a", "xlnx,axi-ethernet-1.00.a";
+        reg = <0x0 0x40c00000 0x0 0x40000>, <0x0 0x41e00000 0x0 0x10000>;
+        reg-names = "mac", "dma";
         interrupt-parent = <&PLIC0>;
+        interrupts = <3>;
+
+        phy-mode = "rgmii-id";
+        phy-handle = <&eth_xlnx_phy0>;
+        local-mac-address = [00 18 3e 02 e3 7f];
+
+        dmas = <&eth_xlnx_dma 0>, <&eth_xlnx_dma 1>;
+        dma-names = "tx_chan0", "rx_chan0";
+
+        // Checksum offload
+        xlnx,rxcsum = <2>;
+        // Depth of the RX/TX packet buffer
+        xlnx,rxmem = <0x1000>;
+        xlnx,txcsum = <2>;
+
+        clock-names = "s_axi_lite_clk", "axis_clk", "ref_clk", "mgt_clk";
+        clocks = <&clk100>, <&clk100>, <&clk125>, <&clk125>;
+
         mdio {
             #address-cells = <1>;
             #size-cells = <0>;
             eth_xlnx_phy0: ethernet-phy@1 {
+                reg = <1>;
                 compatible = "ethernet-phy-ieee802.3-c22";
-                device-type = "ethernet-phy";
-                adi,rx-internal-delay-ps = <2000>;
-                adi,tx-internal-delay-ps = <2000>;
-                reg = <0x1>;
+
+                interrupt-parent = <&PLIC0>;
+                interrupts = <10>;
             };
         };
     };

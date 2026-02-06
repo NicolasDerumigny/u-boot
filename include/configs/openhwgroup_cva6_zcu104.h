@@ -14,9 +14,9 @@
 #define CFG_SYS_MAX_FLASH_BANKS 1
 #define CFG_SYS_FLASH_BASE 0x0
 
-#define CFG_EXTRA_ENV_SETTINGS                                                 \
-  "bootargs=loglevel=8\0"                                                      \
-  "uimage_sector_start=0x100000\0"                                             \
-  "uimage_size=0x8000\0"
+#define CFG_EXTRA_ENV_SETTINGS                                \
+	"bootargs=loglevel=8 printk.show_cpu=1 earlyprintk\0" \
+	"uimage_sector_start=0x100000\0"                      \
+	"uimage_size=0x8000\0"
 
 #endif
