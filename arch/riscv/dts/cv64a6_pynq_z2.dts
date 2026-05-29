@@ -9,7 +9,6 @@
   model = "eth,ariane-bare";
   chosen {
     stdout-path = "/soc/uart@10000000:115200";
-    //tick-timer =  "/cpus/cpu@0";
   };
   cpus {
     #address-cells = <1>;
@@ -126,14 +125,6 @@
         voltage-ranges = <3300 3300>;
         disable-wp;
       };
-      // mmc-slot@0 {
-      //   compatible = "fsl,mpc8323rdb-mmc-slot", "mmc-spi-slot";
-      //   reg = <0>;  //Chip select 0
-      //   spi-max-frequency = <12500000>;
-      //   voltage-ranges = <3300 3300>;
-      //   //interrupts = < 2 2 >;
-      //   //interrupt-parent = <&PLIC0>;
-      // };
     };
     xlnx_gpio: gpio@40000000 {
       #gpio-cells = <2>;
