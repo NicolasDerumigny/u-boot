@@ -20,9 +20,11 @@
       reg = <0>;
       status = "okay";
       compatible = "eth, ariane", "riscv";
-      riscv,isa = "rv64imafdch";
+      riscv,isa = "rv64imafdch_zicbom";
       mmu-type = "riscv,sv39";
       tlb-split;
+      d-cache-block-size = <128>;
+      riscv,cbom-block-size = <128>;
       // HLIC - hart local interrupt controller
       CPU0_intc: interrupt-controller {
         #interrupt-cells = <1>;
