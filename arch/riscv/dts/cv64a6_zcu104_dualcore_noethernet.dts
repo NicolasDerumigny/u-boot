@@ -15,11 +15,6 @@
       #clock-cells = <0>;
       clock-frequency = <75000000>;
   };
-  clk125: clk125 {
-      compatible = "fixed-clock";
-      #clock-cells = <0>;
-      clock-frequency = <125000000>;
-  };
   cpus {
     #address-cells = <1>;
     #size-cells = <0>;
@@ -33,8 +28,8 @@
       riscv,isa = "rv64imafdch_zicbom";
       mmu-type = "riscv,sv39";
       tlb-split;
-      d-cache-block-size = <128>;
-      riscv,cbom-block-size = <128>;
+      d-cache-block-size = <16>;
+      riscv,cbom-block-size = <16>;
       // HLIC - hart local interrupt controller
       CPU0_intc: interrupt-controller {
         #interrupt-cells = <1>;
@@ -51,8 +46,8 @@
       riscv,isa = "rv64imafdch_zicbom";
       mmu-type = "riscv,sv39";
       tlb-split;
-      d-cache-block-size = <128>;
-      riscv,cbom-block-size = <128>;
+      d-cache-block-size = <16>;
+      riscv,cbom-block-size = <16>;
       // HLIC - hart local interrupt controller
       CPU1_intc: interrupt-controller {
         #interrupt-cells = <1>;
@@ -63,7 +58,7 @@
   };
   memory@80000000 {
     device_type = "memory";
-    reg = <0x0 0x80000000 0x0 0x40000000>;
+    reg = <0x0 0x80000000 0x2 0x0>;
   };
   leds {
     compatible = "gpio-leds";
@@ -86,16 +81,6 @@
       gpios = <&xlnx_gpio 3 GPIO_ACTIVE_HIGH>;
       linux,default-trigger = "panic";
       retain-state-suspended;
-    };
-    eth0_led100M {
-      gpios = <&xlnx_eth_gpio 0 GPIO_ACTIVE_HIGH>;
-      default-state = "off";
-      linux,default-trigger = "axienet-40c00000:01:100Mbps";
-    };
-    eth0_led1G {
-      gpios = <&xlnx_eth_gpio 1 GPIO_ACTIVE_HIGH>;
-      default-state = "off";
-      linux,default-trigger = "axienet-40c00000:01:1Gbps";
     };
   };
   L26: soc {
@@ -167,69 +152,6 @@
         disable-wp;
       };
     };
-    eth_xlnx_dma: dma@41e00000 {
-        compatible = "xlnx,axi-dma-1.00.a";
-        dma-controller;
-        #dma-cells = <1>;
-        reg = <0x0 0x41e00000 0x0 0x10000>;
-        interrupt-parent = <&PLIC0>;
-
-        xlnx,addrwidth = <64>;
-        xlnx,axistream-connected;
-        xlnx,sg-length-width = <14>;
-
-        clocks = <&clk75>;
-        clock-names = "s_axi_lite_aclk";
-
-        eth_xlnx_dma_mm2s: dma-channel@41e00000 {
-            compatible = "xlnx,axi-dma-mm2s-channel";
-            interrupts = <8>;
-            xlnx,datawidth = <64>;
-            xlnx,include-dre;
-        };
-
-        eth_xlnx_dma_s2mm: dma-channel@41e00030 {
-            compatible = "xlnx,axi-dma-s2mm-channel";
-            interrupts = <9>;
-            xlnx,datawidth = <64>;
-            xlnx,include-dre;
-        };
-    };
-    eth_xlnx_mac: ethernet@40c00000 {
-        compatible = "xlnx,axi-ethernet-2.01.a", "xlnx,axi-ethernet-1.01.a", "xlnx,axi-ethernet-1.00.a";
-        reg = <0x0 0x40c00000 0x0 0x40000>, <0x0 0x41e00000 0x0 0x10000>;
-        reg-names = "mac", "dma";
-        interrupt-parent = <&PLIC0>;
-        interrupts = <3>;
-
-        phy-mode = "rgmii-id";
-        phy-handle = <&eth_xlnx_phy0>;
-        local-mac-address = [00 18 3e 02 e3 7f];
-
-        dmas = <&eth_xlnx_dma 0>, <&eth_xlnx_dma 1>;
-        dma-names = "tx_chan0", "rx_chan0";
-
-        // Checksum offload
-        xlnx,rxcsum = <2>;
-        // Depth of the RX/TX packet buffer
-        xlnx,rxmem = <0x1000>;
-        xlnx,txcsum = <2>;
-
-        clock-names = "s_axi_lite_clk", "axis_clk", "ref_clk", "mgt_clk";
-        clocks = <&clk75>, <&clk75>, <&clk125>, <&clk125>;
-
-        mdio {
-            #address-cells = <1>;
-            #size-cells = <0>;
-            eth_xlnx_phy0: ethernet-phy@1 {
-                reg = <1>;
-                compatible = "ethernet-phy-ieee802.3-c22";
-
-                interrupt-parent = <&PLIC0>;
-                interrupts = <10>;
-            };
-        };
-    };
     xlnx_gpio: gpio@40000000 {
       #gpio-cells = <2>;
       compatible = "xlnx,xps-gpio-1.00.a";
@@ -239,19 +161,6 @@
       xlnx,all-outputs = <0x1>;
       xlnx,dout-default = <0x0>;
       xlnx,gpio-width = <0x4>;
-      xlnx,interrupt-present = <0x0>;
-      xlnx,is-dual = <0x0>;
-      xlnx,tri-default = <0xffffffff>;
-    };
-    xlnx_eth_gpio: gpio@40010000 {
-      #gpio-cells = <2>;
-      compatible = "xlnx,xps-gpio-1.00.a";
-      gpio-controller;
-      reg = <0x0 0x40010000 0x0 0x10000>;
-      xlnx,all-inputs = <0x0>;
-      xlnx,all-outputs = <0x1>;
-      xlnx,dout-default = <0x0>;
-      xlnx,gpio-width = <0x2>;
       xlnx,interrupt-present = <0x0>;
       xlnx,is-dual = <0x0>;
       xlnx,tri-default = <0xffffffff>;

@@ -14,9 +14,16 @@
 #define CFG_SYS_MAX_FLASH_BANKS 1
 #define CFG_SYS_FLASH_BASE 0x0
 
+#define CFG_SYS_DRAM_TEST
+#define CFG_SYS_MEMTEST_START 0x82000000
+#define CFG_SYS_MEMTEST_END 0x280000000
+#define CFG_SYS_MEMTEST_STEP 0x40000
+
 #define CFG_EXTRA_ENV_SETTINGS                                                  \
 	"bootargs=loglevel=8 printk.show_cpu=1 earlycon console=ttyS0,115200\0" \
 	"uimage_sector_start=0x100000\0"                                        \
-	"uimage_size=0x8000\0"
+	"uimage_size=0x9000\0"
+
+#define RISCV_SMODE_TIMER_FREQ 37500000
 
 #endif
